@@ -7,4 +7,5 @@
 5. Use the supported-category set to check a category, then implement and show filter_by_category. For example, account selects T301 and T304 in the starting registry; classroom is supported but currently has no tickets. An unsupported category such as parking should receive a clear message.
 6. Check found/missing lookup, empty input, duplicate IDs, priority updates, category selection, and independent copies. Save a filtered selection now so that you can revisit its independence on Thursday.
 7. Begin the README’s three-row lookup/update/filter comparison. Explain which representation fits each operation and why; do not build six parallel implementations or memorize an exhaustive cost table. Commit the baseline.
-8. Stop here on Monday. Queues, processing, undo, and cancellation come after their instruction. Use display_tickets to show lookup/category results; no state summary is needed until Tuesday.
+
+ Stop here on Monday. Queues, processing, undo, and cancellation come after their instruction. Use display_tickets to show lookup/category results; no state summary is needed until Tuesday.
