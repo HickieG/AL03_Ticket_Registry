@@ -1,7 +1,9 @@
 """Optional English-first starter; develop one ticket application across three days."""
 
+from collections import deque
+
 from TicketData import TICKETS, SUPPORTED_CATEGORIES
-from Ticket_Display import display_tickets
+from Ticket_Display import display_state, display_tickets
 
 # ======================================================================
 # MONDAY - Find, update, and select
@@ -73,7 +75,14 @@ def enqueue_ticket(state, ticket_id):
     # Check that the ID exists, its ticket is open, and it is not already waiting.
     # If any check fails, return False without changing any part of state.
     # Otherwise, add the ID at the back of pending and return True.
-    raise NotImplementedError("Add an eligible ticket to waiting work.")
+    registry = state["registry"]
+    pending = state["pending"]
+    if ticket_id not in registry:
+        return False
+    if registry[ticket_id].get("status") != "open" or ticket_id in pending:
+        return False
+    pending.append(ticket_id)
+    return True
 
 
 def process_next(state):
@@ -82,7 +91,21 @@ def process_next(state):
     # Take the oldest ID from the front of pending and find its live ticket.
     # Append a history record with named ticket_id and previous_status fields.
     # Mark the ticket completed and return its ID.
-    raise NotImplementedError("Process the oldest pending request.")
+    registry = state["registry"]
+    pending = state["pending"]
+    undo = state["undo"]
+    if not pending:
+        return None
+    ticket_id = pending.popleft()
+    ticket = registry[ticket_id]
+    previous_status = ticket["status"]
+    change = {
+        "ticket_id": ticket_id,
+        "previous_status": previous_status,
+    }
+    undo.append(change)
+    ticket["status"] = "completed"
+    return ticket_id
 
 
 def undo_process(state):
@@ -91,7 +114,16 @@ def undo_process(state):
     # Remove the newest history record and use its named fields to find the ticket.
     # Restore only its prior status; keep unrelated priority changes.
     # Return the ID to the front of pending, then return that ID to the caller.
-    raise NotImplementedError("Undo the latest successful processing action.")
+    registry = state["registry"]
+    pending = state["pending"]
+    undo = state["undo"]
+    if not undo:
+        return None
+    change = undo.pop()
+    ticket_id = change["ticket_id"]
+    registry[ticket_id]["status"] = change["previous_status"]
+    pending.appendleft(ticket_id)
+    return ticket_id
 
 
 # ======================================================================
@@ -137,11 +169,38 @@ def main():
     # Run all tests, add brief personal README notes, and commit progress.
     # Each partner tests a full personal copy and submits their own repository URL.
 
-    # Replace this message as your Monday baseline becomes ready.
+    registry = build_registry(TICKETS)
+    state = {
+        "registry": registry,
+        "pending": deque(),
+        "undo": [],
+    }
+
+    print("\nTUESDAY - Queue, process, and undo")
+    print("Queue T301:", enqueue_ticket(state, "T301"))
+    print("Queue T302:", enqueue_ticket(state, "T302"))
+    print("Reject duplicate T301:", enqueue_ticket(state, "T301"))
+    print("Reject unknown T999:", enqueue_ticket(state, "T999"))
+    print("Reject completed T306:", enqueue_ticket(state, "T306"))
+    display_state("After queue requests", state)
+
+    print("Process next:", process_next(state))
+    print("Process next:", process_next(state))
+    state["registry"]["T302"]["priority"] = "urgent"
+    print("Updated T302 priority before undo:", state["registry"]["T302"]["priority"])
+    display_state("After processing T301 and T302", state)
+
+    print("Undo latest process:", undo_process(state))
+    display_state("After undoing T302", state)
+    print("T301 status remains:", state["registry"]["T301"]["status"])
+    print("T302 priority remains:", state["registry"]["T302"]["priority"])
+
+    print("Undo earlier process:", undo_process(state))
+    print("Undo with empty history:", undo_process(state))
+    print("Process restored queue item:", process_next(state))
+    print("Process restored queue item:", process_next(state))
+    print("Process with empty queue:", process_next(state))
 
 
 if __name__ == "__main__":
-    registry = build_registry(TICKETS)
-    ticket = indexed_lookup(registry, "T301")
-    display_tickets("Found ticket T301", [ticket] if ticket else [])
-    print("Found ticket T999 (missing):", indexed_lookup(registry, "T999"))
+    main()
