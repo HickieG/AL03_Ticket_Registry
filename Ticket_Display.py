@@ -1,7 +1,12 @@
+"""Presentation helpers only; students implement the AL03 ticket operations."""
+
+from ConsoleStyle import print_color
+
+
 def display_tickets(title, records):
     """Show a readable ticket report without changing its supplied records."""
     print()
-    print(title)
+    print_color(title, "heading")
     if not records:
         print("No tickets to display.")
         return
@@ -21,7 +26,7 @@ def display_state(title, state):
         records.append(state["registry"][ticket_id])
     display_tickets(title, records)
 
-    print("Waiting work (next first)")
+    print_color("\nWaiting work (next first)", "heading")
     if not state["pending"]:
         print("No tickets waiting.")
     else:
@@ -31,7 +36,10 @@ def display_state(title, state):
                 ticket = state["registry"][ticket_id]
                 print(f"  {position}. {ticket_id} - {ticket['title']}")
             else:
-                print(f"  {position}. {ticket_id} - ticket no longer available")
+                print_color(
+                    f"  {position}. {ticket_id} - ticket no longer available",
+                    "caution",
+                )
             position += 1
 
     if state["undo"]:

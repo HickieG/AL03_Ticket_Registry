@@ -201,6 +201,5 @@ def main():
     print("Process restored queue item:", process_next(state))
     print("Process with empty queue:", process_next(state))
 
-
 if __name__ == "__main__":
     main()
