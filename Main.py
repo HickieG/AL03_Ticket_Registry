@@ -5,14 +5,10 @@ from collections import deque
 from TicketData import TICKETS, SUPPORTED_CATEGORIES
 from Ticket_Display import display_state, display_tickets
 
-# ======================================================================
-# MONDAY - Find, update, and select
-# Begin after Monday's instruction. Work in this same file all week.
-# ======================================================================
+
 
 def build_registry(records):
-    """Return independent ticket records indexed by unique ID."""
-    ticketsdict = {}
+    ticket_registry = {}
     for record in records:
         ticket_id = record.get("id")
         if ticket_id in ticket_registry:
@@ -23,6 +19,8 @@ def build_registry(records):
 
 def scan_lookup(records, ticket_id):
     """Return the first matching ticket, or None when absent."""
+    # Visit the records in order, comparing each ID with the requested ID.
+    # Return the first match; return None if no record matches.
     for record in records:
         if record.get("id") == ticket_id:
             return record
@@ -30,12 +28,12 @@ def scan_lookup(records, ticket_id):
 
 
 def indexed_lookup(registry, ticket_id):
-    """Return the matching live ticket, or None when absent."""
+
     return registry.get(ticket_id)
 
 
 def update_priority(registry, ticket_id, priority):
-    """Update one existing ticket's priority and report whether it was found."""
+
     ticket = registry.get(ticket_id)
     if not ticket:
         return False
@@ -44,7 +42,7 @@ def update_priority(registry, ticket_id, priority):
 
 
 def filter_by_category(registry, category):
-    """Return independent copies of tickets matching the selected category."""
+
     result = []
     for ticket in registry.values():
         if ticket.get("category") == category:
@@ -52,13 +50,9 @@ def filter_by_category(registry, category):
     return result
 
 
-# ======================================================================
-# TUESDAY - Process in order and undo one action
-# Wait until Tuesday's instruction before beginning this stage.
-# ======================================================================
 
 def enqueue_ticket(state, ticket_id):
-    """Queue a known open ticket once, returning whether it was accepted."""
+
     registry = state["registry"]
     pending = state["pending"]
     if ticket_id not in registry:
@@ -70,7 +64,7 @@ def enqueue_ticket(state, ticket_id):
 
 
 def process_next(state):
-    """Complete the oldest waiting ticket and remember its previous status."""
+
     registry = state["registry"]
     pending = state["pending"]
     undo = state["undo"]
@@ -89,7 +83,6 @@ def process_next(state):
 
 
 def undo_process(state):
-    """Restore the latest processed ticket and return it to the queue front."""
     registry = state["registry"]
     pending = state["pending"]
     undo = state["undo"]
@@ -102,29 +95,28 @@ def undo_process(state):
     return ticket_id
 
 
-# ======================================================================
-# THURSDAY - Cancel consistently and preserve snapshots
-# Wait until Thursday's instruction before beginning this stage.
-# ======================================================================
+def stale_ids(registry, pending):
+    missing = []
+    for ticket_id in pending:
+        if ticket_id not in registry:
+            missing.append(ticket_id)
+    return missing
 
 def repair_queue(registry, pending):
-    """Return a new queue of known IDs and a list of removed missing IDs."""
-    # Prepare a new empty deque and a list for removed IDs.
-    # Visit pending in order: keep known IDs in the new queue, collect missing IDs.
-    # Return both collections without changing registry or the original pending.
-    # The owning application must install the returned queue into its state.
+    new_queue = deque()
     repaired_queue = deque()
     removed = []
     for ticket_id in pending:
         if ticket_id in registry:
+            new_queue.append(ticket_id)
             repaired_queue.append(ticket_id)
         else:
             removed.append(ticket_id)
-    return repaired_queue, removed
+    return new_queue, removed
 
 
-def cancel_ticket(state, ticket_id):
-    """Remove an open ticket and any waiting request, leaving history unchanged."""
+
+def cancel_ticket(state, ticket_id):    
     if ticket_id not in state["registry"]:
         return False
     if state["registry"][ticket_id]["status"] != "open":
@@ -136,7 +128,6 @@ def cancel_ticket(state, ticket_id):
 
 
 def main():
-    """Show only the daily stages whose operations you have completed."""
     registry = build_registry(TICKETS)
     state = {
         "registry": registry,
@@ -159,6 +150,7 @@ def main():
     display_state("After processing T301 and T302", state)
 
     print("Undo latest process:", undo_process(state))
+    display_state("After undoing T302", state)
     print("T301 status remains:", state["registry"]["T301"]["status"])
     print("T302 priority remains:", state["registry"]["T302"]["priority"])
     display_state("After undoing T302", state)
@@ -168,9 +160,14 @@ def main():
     print("Process restored queue item:", process_next(state))
     print("Process restored queue item:", process_next(state))
     print("Process with empty queue:", process_next(state))
+    
     display_state("End of Tuesday", state)
 
     # THURSDAY: demonstrate stale-queue repair and ticket cancellation
+    print("\n Thursday Assignment - Stale Queue Repair")
+    new_queue, removed = repair_queue(state["registry"], state["pending"])
+    state["pending"] = new_queue
+    print("Repair stale queue:", new_queue)
     print("\nTHURSDAY - Stale queue repair and cancellation")
     thursday_state = {
         "registry": build_registry(TICKETS),
