@@ -131,26 +131,33 @@ def undo_process(state):
 # Wait until Thursday's instruction before beginning this stage.
 # ======================================================================
 
+def stale_ids(registry, pending):
+    missing = []
+    for ticket_id in pending:
+        if ticket_id not in registry:
+            missing.append(ticket_id)
+    return missing
+
 def repair_queue(registry, pending):
     """Return a new queue of known IDs and a list of removed missing IDs."""
     # Prepare a new empty deque and a list for removed IDs.
     # Visit pending in order: keep known IDs in the new queue, collect missing IDs.
     # Return both collections without changing registry or the original pending.
     # The owning application must install the returned queue into its state.
-    # new_queue = deque()
-    # removed = []
-    # for ticket_id in pending:
-    #     if ticket_id in registry:
-    #         new_queue.append(ticket_id)
-    #     else:
-    #         removed.append(ticket_id)
-    # return new_queue, removed
-    removed = stale_ids(registry, pending)
-    repaired_queue = deque()
+    new_queue = deque()
+    removed = []
     for ticket_id in pending:
         if ticket_id in registry:
-            repaired_queue.append(ticket_id)
-    return repaired_queue, removed
+            new_queue.append(ticket_id)
+        else:
+            removed.append(ticket_id)
+    return new_queue, removed
+    # removed = stale_ids(registry, pending)
+    # repaired_queue = deque()
+    # for ticket_id in pending:
+    #     if ticket_id in registry:
+    #         repaired_queue.append(ticket_id)
+    # return repaired_queue, removed
 
 
 

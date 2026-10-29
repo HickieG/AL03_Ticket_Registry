@@ -32,7 +32,7 @@ TICKETS = [
         "status": "open",
     },
     {
-        "id": "T305",
+        "id": "",
         "title": "Campus printer is not reachable",
         "category": "network",
         "priority": "normal",
