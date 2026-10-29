@@ -12,7 +12,8 @@ def display_tickets(title, records):
         return
 
     for record in records:
-        print(f"{record['id']} - {record['title']}")
+        ticket_id = record.get("id") or "(missing ID)"
+        print(f"{ticket_id} - {record['title']}")
         print(
             f"  Category: {record['category']} | "
             f"Priority: {record['priority']} | Status: {record['status']}"
@@ -34,7 +35,8 @@ def display_state(title, state):
         for ticket_id in state["pending"]:
             if ticket_id in state["registry"]:
                 ticket = state["registry"][ticket_id]
-                print(f"  {position}. {ticket_id} - {ticket['title']}")
+                display_id = ticket.get("id") or "(missing ID)"
+                print(f"  {position}. {display_id} - {ticket['title']}")
             else:
                 print_color(
                     f"  {position}. {ticket_id} - ticket no longer available",

@@ -15,10 +15,10 @@ def build_registry(records):
     ticketsdict = {}
     for record in records:
         ticket_id = record.get("id")
-        if ticket_id in ticketsdict:
+        if ticket_id in ticket_registry:
             raise ValueError("Duplicate ticket ID: " + ticket_id)
-        ticketsdict[ticket_id] = record.copy()
-    return ticketsdict
+        ticket_registry[ticket_id] = record.copy()
+    return ticket_registry
 
 
 def scan_lookup(records, ticket_id):
@@ -107,24 +107,20 @@ def undo_process(state):
 # Wait until Thursday's instruction before beginning this stage.
 # ======================================================================
 
-def stale_ids(registry, pending):
-    missing = []
-    for ticket_id in pending:
-        if ticket_id not in registry:
-            missing.append(ticket_id)
-    return missing
-
 def repair_queue(registry, pending):
     """Return a new queue of known IDs and a list of removed missing IDs."""
-    new_queue = deque()
+    # Prepare a new empty deque and a list for removed IDs.
+    # Visit pending in order: keep known IDs in the new queue, collect missing IDs.
+    # Return both collections without changing registry or the original pending.
+    # The owning application must install the returned queue into its state.
+    repaired_queue = deque()
     removed = []
     for ticket_id in pending:
         if ticket_id in registry:
-            new_queue.append(ticket_id)
+            repaired_queue.append(ticket_id)
         else:
             removed.append(ticket_id)
-    return new_queue, removed
-
+    return repaired_queue, removed
 
 
 def cancel_ticket(state, ticket_id):
@@ -163,22 +159,55 @@ def main():
     display_state("After processing T301 and T302", state)
 
     print("Undo latest process:", undo_process(state))
-    display_state("After undoing T302", state)
     print("T301 status remains:", state["registry"]["T301"]["status"])
     print("T302 priority remains:", state["registry"]["T302"]["priority"])
+    display_state("After undoing T302", state)
 
     print("Undo earlier process:", undo_process(state))
     print("Undo with empty history:", undo_process(state))
     print("Process restored queue item:", process_next(state))
     print("Process restored queue item:", process_next(state))
     print("Process with empty queue:", process_next(state))
-    
+    display_state("End of Tuesday", state)
+
     # THURSDAY: demonstrate stale-queue repair and ticket cancellation
-    print("\n Thursday Assignment - Stale Queue Repair")
-    new_queue, removed = repair_queue(state["registry"], state["pending"])
-    state["pending"] = new_queue
-    print("Repair stale queue:", new_queue)
+    print("\nTHURSDAY - Stale queue repair and cancellation")
+    thursday_state = {
+        "registry": build_registry(TICKETS),
+        "pending": deque(["T301", "T999", "T304", "T302"]),
+        "undo": [],
+    }
+    saved_selection = filter_by_category(thursday_state["registry"], "account")
+    stale_queue = deque(thursday_state["pending"])
+    new_queue, removed = repair_queue(
+        thursday_state["registry"], thursday_state["pending"]
+    )
+    thursday_state["pending"] = new_queue
+    print("Repair stale queue:", list(thursday_state["pending"]))
     print("Removed from stale queue:", removed)
+    print("Original queue is unchanged:", stale_queue)
+
+    update_priority(thursday_state["registry"], "T301", "urgent")
+    print("Cancel open T304:", cancel_ticket(thursday_state, "T304"))
+
+    before_rejections = {
+        "registry": {},
+        "pending": deque(thursday_state["pending"]),
+        "undo": thursday_state["undo"].copy(),
+    }
+    for current_id in thursday_state["registry"]:
+        before_rejections["registry"][current_id] = (
+            thursday_state["registry"][current_id].copy()
+        )
+
+    print("Reject missing T999:", cancel_ticket(thursday_state, "T999"))
+    print("Reject completed T306:", cancel_ticket(thursday_state, "T306"))
+    print("Rejected cancellations leave state unchanged:",
+        thursday_state == before_rejections)
+
+    display_tickets("Saved account tickets (original copies)", saved_selection)
+    display_state("Current tickets after update and cancellation", thursday_state)
+
 
 if __name__ == "__main__":
     main()
