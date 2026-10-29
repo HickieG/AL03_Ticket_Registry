@@ -137,7 +137,21 @@ def repair_queue(registry, pending):
     # Visit pending in order: keep known IDs in the new queue, collect missing IDs.
     # Return both collections without changing registry or the original pending.
     # The owning application must install the returned queue into its state.
-    raise NotImplementedError("Repair missing-ticket references without reordering.")
+    # new_queue = deque()
+    # removed = []
+    # for ticket_id in pending:
+    #     if ticket_id in registry:
+    #         new_queue.append(ticket_id)
+    #     else:
+    #         removed.append(ticket_id)
+    # return new_queue, removed
+    removed = stale_ids(registry, pending)
+    repaired_queue = deque()
+    for ticket_id in pending:
+        if ticket_id in registry:
+            repaired_queue.append(ticket_id)
+    return repaired_queue, removed
+
 
 
 def cancel_ticket(state, ticket_id):
@@ -147,7 +161,15 @@ def cancel_ticket(state, ticket_id):
     # Remove the eligible ticket from the registry and remove its pending reference.
     # You may reuse repair_queue, installing its returned queue into state.
     # Leave other requests in order and history unchanged; return True.
-    raise NotImplementedError("Cancel an open ticket consistently.")
+    
+    if ticket_id not in state["registry"]:
+        return False
+    if state["registry"][ticket_id]["status"] != "open":
+        return False
+    del state["registry"][ticket_id]
+    new_queue, _ = repair_queue(state["registry"], state["pending"])
+    state["pending"] = new_queue
+    return True
 
 
 def main():
@@ -200,6 +222,13 @@ def main():
     print("Process restored queue item:", process_next(state))
     print("Process restored queue item:", process_next(state))
     print("Process with empty queue:", process_next(state))
+    
+    # THURSDAY: demonstrate stale-queue repair and ticket cancellation
+    print("\n Thursday Assignment - Stale Queue Repair")
+    new_queue, removed = repair_queue(state["registry"], state["pending"])
+    state["pending"] = new_queue
+    print("Repair stale queue:", new_queue)
+    print("Removed from stale queue:", removed)
 
 if __name__ == "__main__":
     main()
